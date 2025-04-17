@@ -1,0 +1,60 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix
+
+# 1. データ読み込み
+df = pd.read_csv("flights.csv")
+
+# 2. 遅延フラグの作成（15分以上の遅れを遅延と定義）
+df['DELAYED'] = df['DEPARTURE_DELAY'].apply(lambda x: 1 if x > 15 else 0)
+
+# 3. 不要な列・欠損値を削除
+df = df[['MONTH', 'DAY', 'AIRLINE', 'ORIGIN_AIRPORT', 'DESTINATION_AIRPORT',
+         'SCHEDULED_DEPARTURE', 'DELAYED']].dropna()
+
+# 4. 特徴量と目的変数に分ける
+X = df.drop("DELAYED", axis=1)
+y = df["DELAYED"]
+
+# 5. カテゴリ列と数値列を分離
+cat_cols = ['AIRLINE', 'ORIGIN_AIRPORT', 'DESTINATION_AIRPORT']
+num_cols = ['MONTH', 'DAY', 'SCHEDULED_DEPARTURE']
+
+# 6. 前処理パイプライン作成
+preprocessor = ColumnTransformer([
+    ("num", StandardScaler(), num_cols),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols)
+])
+
+# 7. モデル（ランダムフォレスト）
+model = Pipeline([
+    ("preprocessing", preprocessor),
+    ("classifier", RandomForestClassifier(n_estimators=100, random_state=42))
+])
+
+# 8. データ分割
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 9. 学習と予測
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+# 10. 評価
+print(classification_report(y_test, y_pred))
+conf_mat = confusion_matrix(y_test, y_pred)
+
+# 11. 混同行列を可視化
+sns.heatmap(conf_mat, annot=True, fmt="d", cmap="Blues")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
