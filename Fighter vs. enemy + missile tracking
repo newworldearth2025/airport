@@ -1,0 +1,61 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+# 敵機の初期位置・速度（直進）
+enemy_pos = np.array([1000.0, 1000.0, 1000.0])
+enemy_vel = np.array([-20.0, -5.0, 0.0])  # 遅めに
+
+# 自機の初期位置（固定）
+fighter_pos = np.array([0.0, 0.0, 0.0])
+
+# ミサイルの初期位置・速度
+missile_pos = fighter_pos.copy()
+missile_speed = 100.0  # m/s
+
+# 時間設定
+dt = 0.1
+T = 30  # 秒
+steps = int(T / dt)
+
+# 記録用
+missile_traj = []
+enemy_traj = []
+
+# シミュレーション開始
+for step in range(steps):
+    # 敵機の移動
+    enemy_pos += enemy_vel * dt
+    enemy_traj.append(enemy_pos.copy())
+
+    # ミサイルの追尾方向（ベクトル正規化）
+    direction = enemy_pos - missile_pos
+    distance = np.linalg.norm(direction)
+
+    if distance < 10:  # 命中判定
+        print(f"💥 Hit at t = {step * dt:.2f} seconds!")
+        break
+
+    direction_normalized = direction / distance
+
+    # ミサイルの移動
+    missile_pos += direction_normalized * missile_speed * dt
+    missile_traj.append(missile_pos.copy())
+
+# 配列化
+missile_traj = np.array(missile_traj)
+enemy_traj = np.array(enemy_traj)
+
+# 3Dプロット
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(*missile_traj.T, label='Missile Path', color='red')
+ax.plot(*enemy_traj.T, label='Enemy Path', color='blue')
+ax.scatter(*fighter_pos, color='green', s=100, label='Fighter')
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_zlabel("Z")
+ax.set_title("Missile Tracking Enemy Aircraft")
+ax.legend()
+plt.tight_layout()
+plt.show()
