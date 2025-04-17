@@ -1,0 +1,63 @@
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+# パラメータ（戦闘機の仮想値）
+mass = 13000  # kg
+wing_area = 38.0  # m^2
+air_density = 1.225  # kg/m^3 (地上)
+drag_coefficient = 0.02
+lift_coefficient = 1.2
+thrust = 160000  # N
+
+# 重力加速度
+g = 9.81
+
+def aircraft_dynamics(t, y):
+    """
+    y = [x, y, z, vx, vy, vz]
+    """
+    x, y_pos, z, vx, vy, vz = y
+
+    v = np.sqrt(vx**2 + vy**2 + vz**2)
+    if v == 0:
+        v = 1e-6
+
+    # 空力
+    drag = 0.5 * air_density * v**2 * wing_area * drag_coefficient
+    lift = 0.5 * air_density * v**2 * wing_area * lift_coefficient
+
+    # 単純にZ軸方向に揚力が働く想定（上向き）
+    ax = (thrust - drag) / mass
+    ay = 0
+    az = (lift / mass) - g  # 重力と揚力
+
+    return [vx, vy, vz, ax, ay, az]
+
+# 初期状態
+initial_state = [0, 0, 1000, 200, 0, 10]  # x, y, z, vx, vy, vz
+
+# 時間設定
+t_span = (0, 30)  # 30秒間
+t_eval = np.linspace(*t_span, 500)
+
+# 数値積分
+sol = solve_ivp(aircraft_dynamics, t_span, initial_state, t_eval=t_eval)
+
+# 結果取得
+x = sol.y[0]
+y_pos = sol.y[1]
+z = sol.y[2]
+
+# 3Dプロット
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(x, y_pos, z, label='Flight Path', color='blue')
+ax.set_xlabel('X (forward)')
+ax.set_ylabel('Y (sideways)')
+ax.set_zlabel('Z (altitude)')
+ax.set_title("Fighter Jet Flight Trajectory Simulation")
+ax.legend()
+plt.tight_layout()
+plt.show()
